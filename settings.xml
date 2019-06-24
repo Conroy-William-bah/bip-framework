@@ -1,0 +1,33 @@
+<settings>
+  <servers>
+     <server>
+        <id>nexus3</id>
+        <username>${bip.nexus.username}</username>
+        <password>${bip.nexus.password}</password>
+     </server>
+  </servers>
+  <profiles>
+    <profile>
+      <id>nexus</id>
+      <activation>
+            <activeByDefault>true</activeByDefault>
+        </activation>
+      <repositories>
+        <repository>
+          <id>central</id>
+          <url>http://central</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+      </repositories>
+     <pluginRepositories>
+        <pluginRepository>
+          <id>central</id>
+          <url>http://central</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+  </profiles>
+</settings>
