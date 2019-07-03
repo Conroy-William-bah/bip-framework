@@ -142,7 +142,7 @@ public class BipBaseLogger {
 					"int argument 'maxLengthPerString' for splitStringToLength(..) must be greater than zero.");
 		}
 		if (string == null) {
-			return Arrays.asList(new String[] { "" });
+			return Arrays.asList("");
 		}
 
 		// return an array of strings, each of which does not exceed max allowable docker length
@@ -168,31 +168,31 @@ public class BipBaseLogger {
 		}
 
 		String[] words = string.split(SPACE);
-		String toLength = "";
+		StringBuilder toLength = new StringBuilder("");
 		boolean alreadyAdded = false;
 		// accumulate words to the length specified for each addToThisList entry
 		for (String word : words) {
 			String originalWord = word;
 			if ((toLength.length() + word.length() + 1) > maxLength) {
 				while ((word.length() + 1) > maxLength) {
-					toLength = avoidEmptyAdditions(addToThisList, toLength);
-					addToThisList.add(word.substring(0, maxLength - 1));
-					word = word.substring(maxLength - 1);
+					toLength = new StringBuilder(addToListWhileAvoidingEmptyAdditions(addToThisList, toLength.toString()));
+					addToThisList.add(word.substring(0, maxLength));
+					word = word.substring(maxLength);
 				}
-				if (!"".equals(toLength)) {
-					addToThisList.add(toLength);
+				if (!"".equals(toLength.toString())) {
+					addToThisList.add(toLength.toString());
 				}
-				toLength = word + SPACE; // start a new string
+				toLength = new StringBuilder(word + SPACE); // start a new string
 
 				// if it is the last word then adding to the list is still pending
 				alreadyAdded = (originalWord == words[words.length - 1] ? false : true);
 			} else {
-				toLength = toLength + word + SPACE;
+				toLength.append(word + SPACE);
 				alreadyAdded = false;
 			}
 		}
 		if (!alreadyAdded) {
-			addToThisList.add(toLength);
+			addToThisList.add(toLength.toString());
 		}
 	}
 
@@ -203,7 +203,7 @@ public class BipBaseLogger {
 	 * @param toLength current log message being accumulated so as to not exceed max length
 	 * @return
 	 */
-	private String avoidEmptyAdditions(final List<String> addToThisList, final String toLength) {
+	private String addToListWhileAvoidingEmptyAdditions(final List<String> addToThisList, final String toLength) {
 		String stringTobeAdded = toLength;
 		if (!"".equals(stringTobeAdded)) {
 			addToThisList.add(stringTobeAdded);
@@ -239,7 +239,7 @@ public class BipBaseLogger {
 	 */
 	private void logStrings(final List<String> strings, final Marker marker, final Level level) {
 		List<String> stringsToLog = ((strings == null) || strings.isEmpty())
-				? Arrays.asList(new String[] { "No log message provided. This log entry records the empty log event." })
+				? Arrays.asList("No log message provided. This log entry records the empty log event.")
 						: strings;
 				Level levelToLogAt = (level == null) ? this.getLevel() : level;
 
@@ -251,8 +251,9 @@ public class BipBaseLogger {
 				String maxSequence = Integer.toString(stringsToLog.size());
 				int sequence = 1;
 				for (String toLog : stringsToLog) {
-					MDC.put(SPLIT_MDC_NAME, Integer.toString(sequence) + " of " + maxSequence);
+					MDC.put(SPLIT_MDC_NAME, Integer.toString(sequence++) + " of " + maxSequence);
 					this.sendLogAtLevel(levelToLogAt, marker, toLog, null);
+					MDC.clear();
 				}
 	}
 

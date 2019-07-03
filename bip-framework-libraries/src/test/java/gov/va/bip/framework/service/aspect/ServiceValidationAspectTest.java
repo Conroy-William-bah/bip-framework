@@ -96,6 +96,27 @@ public class ServiceValidationAspectTest {
 	}
 
 	@Test
+	public final void testCallPostValidationBasedOnDomainResponse() {
+		try {
+			DomainResponse domainResponse = mock(DomainResponse.class);
+			when(domainResponse.hasErrors()).thenReturn(false);
+			when(domainResponse.hasFatals()).thenReturn(false);
+			ServiceValidationAspect aspect = mock(ServiceValidationAspect.class);
+			Method method = null;
+			try {
+				method = this.getClass().getMethod("testMethod", String.class);
+			} catch (NoSuchMethodException | SecurityException e) {
+				fail("exception not expected");
+			}
+
+			ReflectionTestUtils.invokeMethod(aspect, "callPostValidationBasedOnDomainResponse", proceedingJoinPoint, domainResponse,
+					method);
+		} catch (BipRuntimeException e) {
+			assertTrue(e.getCause() instanceof NullPointerException);
+		}
+	}
+
+	@Test
 	public final void testAroundAdviceNoArgsHappy() {
 		DomainResponse returned = null;
 
@@ -122,6 +143,28 @@ public class ServiceValidationAspectTest {
 		}
 
 		assertNull(returned);
+	}
+
+	@Test(expected = BipRuntimeException.class)
+	public final void testAddValidationErrorMessages_InstantiationExceptionCatchBlock() {
+		Method mockMethod;
+		try {
+			mockMethod = this.getClass().getMethod("testMethodThrowingInstantiationException", String.class);
+			ReflectionTestUtils.invokeMethod(aspect, "addValidationErrorMessages", mockMethod, null);
+		} catch (NoSuchMethodException | SecurityException e) {
+			fail("Unexpected exception");
+		}
+	}
+
+	@Test(expected = BipRuntimeException.class)
+	public final void testAddValidationErrorMessages_IllegalAccessExceptionCatchBlock() {
+		Method mockMethod;
+		try {
+			mockMethod = this.getClass().getMethod("testMethodThrowingIllegalAccessException", String.class);
+			ReflectionTestUtils.invokeMethod(aspect, "addValidationErrorMessages", mockMethod, null);
+		} catch (NoSuchMethodException | SecurityException e) {
+			fail("Unexpected exception");
+		}
 	}
 
 	@Test
@@ -226,6 +269,29 @@ public class ServiceValidationAspectTest {
 
 	public void testMethod(final String testParam) {
 		// do nothing
+	}
+
+	public DomainResponseThrowingInstantiationException testMethodThrowingInstantiationException(final String testParam) throws InstantiationException {
+		return new DomainResponseThrowingInstantiationException();
+	}
+
+	public static class DomainResponseThrowingInstantiationException extends DomainResponse {
+
+		public DomainResponseThrowingInstantiationException() throws InstantiationException {
+			throw new InstantiationException();
+		}
+	}
+
+	public DomainResponseThrowingIllegalAccessException testMethodThrowingIllegalAccessException(final String testParam)
+			throws IllegalAccessException {
+		return new DomainResponseThrowingIllegalAccessException();
+	}
+
+	public static class DomainResponseThrowingIllegalAccessException extends DomainResponse {
+
+		public DomainResponseThrowingIllegalAccessException() throws IllegalAccessException {
+			throw new IllegalAccessException();
+		}
 	}
 
 	public static class DomainResponseValidatorForTest implements Validator<DomainResponse> {

@@ -1,7 +1,8 @@
 package gov.va.bip.framework.rest.exception;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
+import java.util.Locale;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.ConstraintViolation;
@@ -10,6 +11,8 @@ import javax.validation.ConstraintViolationException;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.event.Level;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -58,6 +61,9 @@ public class BipRestGlobalExceptionHandler extends BaseHttpProviderPointcuts {
 	/** The Constant LOGGER. */
 	private static final BipLogger logger = BipLoggerFactory.getLogger(BipRestGlobalExceptionHandler.class);
 
+	@Autowired
+	private MessageSource messageSource;
+
 	/**
 	 * Return value if no exception exists to provide a message.
 	 * To get default message text, use {@link #deriveMessage(Exception)}.
@@ -83,12 +89,12 @@ public class BipRestGlobalExceptionHandler extends BaseHttpProviderPointcuts {
 		 */
 		String causeClassname = (ex.getCause() == null
 				? null
-				: ex.getCause().getClass().getName() + ":");
+						: ex.getCause().getClass().getName() + ":");
 
 		/* Scrub any occurrances of cause classname from exception message */
 		String msg = (causeClassname != null && StringUtils.isNotBlank(ex.getMessage())
 				? ex.getMessage().replaceAll(causeClassname, "")
-				: ex.getMessage());
+						: ex.getMessage());
 
 		/* Final check for empty */
 		if (StringUtils.isBlank(msg)) {
@@ -184,10 +190,11 @@ public class BipRestGlobalExceptionHandler extends BaseHttpProviderPointcuts {
 	 * @return ResponseEntity - the HTTP Response Entity
 	 */
 	protected ResponseEntity<Object> standardHandler(final BipExceptionExtender ex, final HttpStatus httpResponseStatus) {
-		if ((ex == null) || (ex.getMessageKey() == null)) {
+		if ((ex == null) || (ex.getExceptionData().getMessageKey() == null)) {
 			return failSafeHandler();
 		}
-		return standardHandler((Exception) ex, ex.getMessageKey(), ex.getSeverity(), httpResponseStatus);
+		return standardHandler((Exception) ex, ex.getExceptionData().getMessageKey(), ex.getExceptionData().getSeverity(),
+				httpResponseStatus);
 	}
 
 	/**
@@ -289,17 +296,25 @@ public class BipRestGlobalExceptionHandler extends BaseHttpProviderPointcuts {
 			MessageKey key = MessageKeys.BIP_GLOBAL_VALIDATOR_METHOD_ARGUMENT_NOT_VALID;
 			for (final FieldError error : ex.getBindingResult().getFieldErrors()) {
 				String errorCodes = String.join(", ", error.getCodes());
-				String[] params = new String[] { "field", errorCodes, error.getDefaultMessage() };
+				String message = messageSource.getMessage(error, Locale.US);
+				if (StringUtils.isEmpty(message)) {
+					message = error.getDefaultMessage();
+				}
+				String[] params = new String[] { "field", errorCodes, message };
 				log(ex, key, MessageSeverity.ERROR, HttpStatus.BAD_REQUEST, params);
 				apiError.addMessage(MessageSeverity.ERROR, errorCodes,
-						error.getDefaultMessage(), HttpStatus.BAD_REQUEST);
+						message, HttpStatus.BAD_REQUEST);
 			}
 			for (final ObjectError error : ex.getBindingResult().getGlobalErrors()) {
 				String errorCodes = String.join(", ", error.getCodes());
-				String[] params = new String[] { "object", errorCodes, error.getDefaultMessage() };
+				String message = messageSource.getMessage(error, Locale.US);
+				if (StringUtils.isEmpty(message)) {
+					message = error.getDefaultMessage();
+				}
+				String[] params = new String[] { "object", errorCodes, message };
 				log(ex, key, MessageSeverity.ERROR, HttpStatus.BAD_REQUEST, params);
 				apiError.addMessage(MessageSeverity.ERROR, errorCodes,
-						error.getDefaultMessage(), HttpStatus.BAD_REQUEST);
+						message, HttpStatus.BAD_REQUEST);
 			}
 		}
 
@@ -338,13 +353,9 @@ public class BipRestGlobalExceptionHandler extends BaseHttpProviderPointcuts {
 			} catch (IOException e) {
 				log(e, MessageKeys.BIP_GLOBAL_GENERAL_EXCEPTION, MessageSeverity.ERROR, status,
 						params);
-				try {
-					apiError.addMessage(MessageSeverity.ERROR, key.getKey(),
-							new String(responseBody, "UTF-8"),
-							httpClientErrorException.getStatusCode());
-				} catch (UnsupportedEncodingException ex) {
-					logger.warn("Error occurred while converting byte to string", ex);
-				}
+				apiError.addMessage(MessageSeverity.ERROR, key.getKey(),
+						new String(responseBody, Charset.defaultCharset()),
+						httpClientErrorException.getStatusCode());
 			}
 		}
 
@@ -476,7 +487,7 @@ public class BipRestGlobalExceptionHandler extends BaseHttpProviderPointcuts {
 	 */
 	@ExceptionHandler(value = BipRuntimeException.class)
 	public final ResponseEntity<Object> handleBipRuntimeException(final HttpServletRequest req, final BipRuntimeException ex) {
-		return standardHandler(ex, ex.getStatus());
+		return standardHandler(ex, ex.getExceptionData().getStatus());
 	}
 
 	/**

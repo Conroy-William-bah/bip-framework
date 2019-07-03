@@ -9,6 +9,7 @@ import org.springframework.boot.web.servlet.error.ErrorAttributes;
 import org.springframework.boot.web.servlet.error.ErrorController;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.WebRequest;
@@ -19,7 +20,6 @@ import gov.va.bip.framework.messages.MessageKeys;
 import gov.va.bip.framework.messages.MessageSeverity;
 import gov.va.bip.framework.rest.provider.ProviderResponse;
 import gov.va.bip.framework.util.HttpHeadersUtil;
-import springfox.documentation.annotations.ApiIgnore;
 
 /**
  * Spring Boot automatically registers a BasicErrorController bean if you don’t
@@ -34,12 +34,11 @@ import springfox.documentation.annotations.ApiIgnore;
  * information for these specific types
  *
  * @author akulkarni
- * 
+ *
  * @see org.springframework.boot.autoconfigure.web.servlet.error.BasicErrorController
  * @see org.springframework.boot.autoconfigure.web.ErrorProperties
  */
 @RestController
-@ApiIgnore
 public class BasicErrorController implements ErrorController {
 
 	/** Constant for the logger for this class */
@@ -84,10 +83,26 @@ public class BasicErrorController implements ErrorController {
 
 		return new ResponseEntity<>(providerResponse, HttpHeadersUtil.buildHttpHeadersForError(), httpStatus);
 	}
+	
+	/**
+	 * Respond to CSRF protection token and return null since CSRF is disabled
+	 * in BIP framework. This solution is chosen because disabling CSRF is not
+	 * currently being supported in SwaggerUI as given in
+	 * 
+	 * https://github.com/springfox/springfox/pull/2639
+	 *
+	 * @return the CsrfToken being returned
+	 */
+	@RequestMapping("/csrf")
+	public CsrfToken csrf() {
+		return null;
+		// logic to return the CSRF token:
+		// return null since no CSRF token is required
+	}
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see
 	 * org.springframework.boot.web.servlet.error.ErrorController#getErrorPath()
 	 */
