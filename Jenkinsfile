@@ -7,5 +7,4 @@ mavenLibraryPipeline {
 
     //Below config is for local pipeline testing
     skipSonar = true
-    mvnSettingsFile = 'settings.xml'
 }
